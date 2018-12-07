@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpInconsistentReturnPointsInspection */
 
 namespace Illuminate\Container;
 
@@ -11,10 +11,16 @@ use Illuminate\Support\Arr;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container as ContainerContract;
 
+/**
+ * Class Container
+ * @package Illuminate\Container
+ * 容器类
+ */
 class Container implements ContainerContract
 {
     /**
      * The current globally available container (if any).
+     * 当前可用的单例对象
      *
      * @var static
      */
@@ -50,15 +56,17 @@ class Container implements ContainerContract
 
     /**
      * The registered type aliases.
+     * 别名原名的映射表，键是别名，值是原名
      *
-     * @var array
+     * @var string[]
      */
     protected $aliases = [];
 
     /**
      * The registered aliases keyed by the abstract name.
+     * 注册了别名的情况，键是原名，值是别名列表
      *
-     * @var array
+     * @var string[][]
      */
     protected $abstractAliases = [];
 
@@ -78,22 +86,28 @@ class Container implements ContainerContract
 
     /**
      * The stack of concretions currently being built.
+     * 正在构建的类型堆栈，值是完整类型
      *
-     * @var array
+     * @var string[]
      */
     protected $buildStack = [];
 
     /**
      * The parameter override stack.
+     * 覆盖参数列表，每个值都是一个参数列表，其键为参数名
+     * 所谓覆盖参数，即为 make 时传入的第二个参数
      *
-     * @var array
+     * @var array[]
      */
     protected $with = [];
 
     /**
      * The contextual binding map.
+     * 上下文绑定映射，二维数组，一级键 正在构建项，二级键 被依赖项，值是值或闭包
+     * 使用参见 addContextualBinding
      *
      * @var array
+     * @see addContextualBinding
      */
     public $contextual = [];
 
@@ -255,7 +269,7 @@ class Container implements ContainerContract
      */
     protected function getClosure($abstract, $concrete)
     {
-        return function ($container, $parameters = []) use ($abstract, $concrete) {
+        return function (Container $container, $parameters = []) use ($abstract, $concrete) {
             if ($abstract == $concrete) {
                 return $container->build($concrete);
             }
@@ -316,10 +330,12 @@ class Container implements ContainerContract
 
     /**
      * Add a contextual binding to the container.
+     * 向容器添加上下文绑定
+     * 添加完成后，在创建 $concrete 的实例时，如果依赖于 $abstract 则使用 $implementation 实现或实例
      *
-     * @param  string  $concrete
-     * @param  string  $abstract
-     * @param  \Closure|string  $implementation
+     * @param  string  $concrete 正在构建项
+     * @param  string  $abstract 被依赖项
+     * @param  \Closure|string  $implementation 实现闭包或实例，闭包只接受一个参数是容器
      * @return void
      */
     public function addContextualBinding($concrete, $abstract, $implementation)
@@ -453,8 +469,10 @@ class Container implements ContainerContract
     /**
      * Resolve all of the bindings for a given tag.
      *
-     * @param  string  $tag
+     * @param  string $tag
      * @return array
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     public function tagged($tag)
     {
@@ -471,9 +489,10 @@ class Container implements ContainerContract
 
     /**
      * Alias a type to a different name.
+     * 将类型别名为其他名称。
      *
-     * @param  string  $abstract
-     * @param  string  $alias
+     * @param  string  $abstract 原名称
+     * @param  string  $alias 别名
      * @return void
      */
     public function alias($abstract, $alias)
@@ -486,9 +505,11 @@ class Container implements ContainerContract
     /**
      * Bind a new callback to an abstract's rebind event.
      *
-     * @param  string    $abstract
-     * @param  \Closure  $callback
+     * @param  string $abstract
+     * @param  \Closure $callback
      * @return mixed
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     public function rebinding($abstract, Closure $callback)
     {
@@ -502,10 +523,12 @@ class Container implements ContainerContract
     /**
      * Refresh an instance on the given target and method.
      *
-     * @param  string  $abstract
-     * @param  mixed   $target
-     * @param  string  $method
+     * @param  string $abstract
+     * @param  mixed $target
+     * @param  string $method
      * @return mixed
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     public function refresh($abstract, $target, $method)
     {
@@ -517,8 +540,10 @@ class Container implements ContainerContract
     /**
      * Fire the "rebound" callbacks for the given abstract type.
      *
-     * @param  string  $abstract
+     * @param  string $abstract
      * @return void
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     protected function rebound($abstract)
     {
@@ -599,9 +624,11 @@ class Container implements ContainerContract
     /**
      * Resolve the given type from the container.
      *
-     * @param  string  $abstract
-     * @param  array  $parameters
+     * @param  string $abstract
+     * @param  array $parameters
      * @return mixed
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     public function make($abstract, array $parameters = [])
     {
@@ -610,6 +637,7 @@ class Container implements ContainerContract
 
     /**
      *  {@inheritdoc}
+     * @throws Exception
      */
     public function get($id)
     {
@@ -627,9 +655,11 @@ class Container implements ContainerContract
     /**
      * Resolve the given type from the container.
      *
-     * @param  string  $abstract
-     * @param  array  $parameters
+     * @param  string $abstract
+     * @param  array $parameters
      * @return mixed
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     protected function resolve($abstract, $parameters = [])
     {
@@ -709,9 +739,10 @@ class Container implements ContainerContract
 
     /**
      * Get the contextual concrete binding for the given abstract.
+     * 获取给定抽象的上下文具体绑定
      *
-     * @param  string  $abstract
-     * @return \Closure|string|null
+     * @param  string  $abstract 被依赖项
+     * @return \Closure|string|null 设置的实现或实例，不存在返回 null
      */
     protected function getContextualConcrete($abstract)
     {
@@ -722,10 +753,13 @@ class Container implements ContainerContract
         // Next we need to see if a contextual binding might be bound under an alias of the
         // given abstract type. So, we will need to check if any aliases exist with this
         // type and then spin through them and check for contextual bindings on these.
+        # 接下来，我们需要查看上下文绑定是否可以绑定在给定抽象类型的别名下。
+        # 因此，我们需要检查此类型是否存在任何别名，然后依次检查
         if (empty($this->abstractAliases[$abstract])) {
             return;
         }
 
+        # 但是添加上下文环境的时候却又直接用的原名，感觉这个搜索没什么必要
         foreach ($this->abstractAliases[$abstract] as $alias) {
             if (! is_null($binding = $this->findInContextualBindings($alias))) {
                 return $binding;
@@ -735,9 +769,10 @@ class Container implements ContainerContract
 
     /**
      * Find the concrete binding for the given abstract in the contextual binding array.
+     * 在上下文绑定数组中找到给定抽象的具体绑定
      *
-     * @param  string  $abstract
-     * @return \Closure|string|null
+     * @param  string  $abstract 被依赖项
+     * @return \Closure|string|null 设置的实现或实例，不存在返回 null
      */
     protected function findInContextualBindings($abstract)
     {
@@ -748,10 +783,11 @@ class Container implements ContainerContract
 
     /**
      * Determine if the given concrete is buildable.
+     * 确认给定的目标是否可构建
      *
-     * @param  mixed   $concrete
-     * @param  string  $abstract
-     * @return bool
+     * @param  string|Closure  $concrete 真实类名称或者构建用的闭包
+     * @param  string  $abstract 名称，可能是别名
+     * @return bool 是否可构建
      */
     protected function isBuildable($concrete, $abstract)
     {
@@ -760,17 +796,22 @@ class Container implements ContainerContract
 
     /**
      * Instantiate a concrete instance of the given type.
+     * 实例化给定类型的具体实例
      *
-     * @param  string  $concrete
-     * @return mixed
+     * @param  string|Closure $concrete 完整类名称或构建用闭包
+     *      构建用的闭包第一个参数是当前容器，第二个参数是传入的参数列表
+     * @return mixed 构建好的实例
      *
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
+     * @throws \ReflectionException
      */
     public function build($concrete)
     {
         // If the concrete type is actually a Closure, we will just execute it and
         // hand back the results of the functions, which allows functions to be
         // used as resolvers for more fine-tuned resolution of these objects.
+        # 如果具体类型实际上是 Closure，我们将只执行它并返回函数的结果，
+        # 这样可以让解析器函数更精细的创建对象
         if ($concrete instanceof Closure) {
             return $concrete($this, $this->getLastParameterOverride());
         }
@@ -780,7 +821,10 @@ class Container implements ContainerContract
         // If the type is not instantiable, the developer is attempting to resolve
         // an abstract type such as an Interface of Abstract Class and there is
         // no binding registered for the abstractions so we need to bail out.
+        # 如果类型不能实例化，那么就是开发人员正在尝试解析抽象类型（例如接口、抽象类）
+        # 并且没有为抽象类型注册，因为要直接抛出异常
         if (! $reflector->isInstantiable()) {
+            /** @noinspection PhpVoidFunctionResultUsedInspection */
             return $this->notInstantiable($concrete);
         }
 
@@ -791,6 +835,8 @@ class Container implements ContainerContract
         // If there are no constructors, that means there are no dependencies then
         // we can just resolve the instances of the objects right away, without
         // resolving any other types or dependencies out of these containers.
+        # 如果没有构建函数，那意味着没有依赖关系，那么我们就可以立即解析对象的实例
+        # 而不需要其他类型或者依赖关系
         if (is_null($constructor)) {
             array_pop($this->buildStack);
 
@@ -802,6 +848,8 @@ class Container implements ContainerContract
         // Once we have all the constructor's parameters we can create each of the
         // dependency instances and then use the reflection instances to make a
         // new instance of this class, injecting the created dependencies in.
+        # 一旦我们所有的构建函数的参数，我们就可以创建每个依赖项实例，然后用反射实例创建此类的新实例
+        # 并将所创建的依赖项注入其中
         $instances = $this->resolveDependencies(
             $dependencies
         );
@@ -813,9 +861,11 @@ class Container implements ContainerContract
 
     /**
      * Resolve all of the dependencies from the ReflectionParameters.
+     * 通过 ReflectionParameters 解析所有依赖项
      *
-     * @param  array  $dependencies
+     * @param  ReflectionParameter[] $dependencies 构建函数列表
      * @return array
+     * @throws BindingResolutionException
      */
     protected function resolveDependencies(array $dependencies)
     {
@@ -825,6 +875,8 @@ class Container implements ContainerContract
             // If this dependency has a override for this particular build we will use
             // that instead as the value. Otherwise, we will continue with this run
             // of resolutions and let reflection attempt to determine the result.
+            # 如果此依赖项具有特定构建的覆盖，我们将使用它作为值
+            # 否则我们将继续用反射尝试确定结果
             if ($this->hasParameterOverride($dependency)) {
                 $results[] = $this->getParameterOverride($dependency);
 
@@ -834,6 +886,8 @@ class Container implements ContainerContract
             // If the class is null, it means the dependency is a string or some other
             // primitive type which we can not resolve since it is not a class and
             // we will just bomb out with an error since we have no-where to go.
+            # 如果参数的类名是 null，则表示参数是一个字符串或其他一个我们无法解析的原始类型
+            # 因为不是一个类，我们只能
             $results[] = is_null($dependency->getClass())
                             ? $this->resolvePrimitive($dependency)
                             : $this->resolveClass($dependency);
@@ -844,22 +898,22 @@ class Container implements ContainerContract
 
     /**
      * Determine if the given dependency has a parameter override.
+     * 确定给定的参数是否具有参数覆盖，使用参数名称作为判断查找条件
      *
-     * @param  \ReflectionParameter  $dependency
-     * @return bool
+     * @param  ReflectionParameter  $dependency 构造函数参数信息
+     * @return bool 是否找到
      */
     protected function hasParameterOverride($dependency)
     {
-        return array_key_exists(
-            $dependency->name, $this->getLastParameterOverride()
-        );
+        return array_key_exists($dependency->name, $this->getLastParameterOverride());
     }
 
     /**
      * Get a parameter override for a dependency.
+     * 从覆盖参数中找到构造函数用的值
      *
-     * @param  \ReflectionParameter  $dependency
-     * @return mixed
+     * @param  ReflectionParameter  $dependency 构造函数参数信息
+     * @return mixed 找到的值
      */
     protected function getParameterOverride($dependency)
     {
@@ -868,18 +922,21 @@ class Container implements ContainerContract
 
     /**
      * Get the last parameter override.
+     * 获取最后一个覆盖参数列表
      *
-     * @return array
+     * @return array 覆盖参数列表
      */
     protected function getLastParameterOverride()
     {
         return count($this->with) ? end($this->with) : [];
     }
 
+    /** @noinspection PhpDocMissingThrowsInspection */
     /**
      * Resolve a non-class hinted primitive dependency.
+     * 解析一个非 Class 的依赖
      *
-     * @param  \ReflectionParameter  $parameter
+     * @param  ReflectionParameter  $parameter 构造函数的参数信息
      * @return mixed
      *
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
@@ -891,6 +948,7 @@ class Container implements ContainerContract
         }
 
         if ($parameter->isDefaultValueAvailable()) {
+            /** @noinspection PhpUnhandledExceptionInspection */
             return $parameter->getDefaultValue();
         }
 
@@ -906,7 +964,7 @@ class Container implements ContainerContract
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     protected function resolveClass(ReflectionParameter $parameter)
-    {
+    {# todo mark 继续
         try {
             return $this->make($parameter->getClass()->name);
         }
@@ -954,7 +1012,8 @@ class Container implements ContainerContract
      */
     protected function unresolvablePrimitive(ReflectionParameter $parameter)
     {
-        $message = "Unresolvable dependency resolving [$parameter] in class {$parameter->getDeclaringClass()->getName()}";
+        $message =
+            "Unresolvable dependency resolving [$parameter] in class {$parameter->getDeclaringClass()->getName()}";
 
         throw new BindingResolutionException($message);
     }
@@ -1010,9 +1069,7 @@ class Container implements ContainerContract
     {
         $this->fireCallbackArray($object, $this->globalResolvingCallbacks);
 
-        $this->fireCallbackArray(
-            $object, $this->getCallbacksForType($abstract, $object, $this->resolvingCallbacks)
-        );
+        $this->fireCallbackArray($object, $this->getCallbacksForType($abstract, $object, $this->resolvingCallbacks));
 
         $this->fireAfterResolvingCallbacks($abstract, $object);
     }
@@ -1029,7 +1086,8 @@ class Container implements ContainerContract
         $this->fireCallbackArray($object, $this->globalAfterResolvingCallbacks);
 
         $this->fireCallbackArray(
-            $object, $this->getCallbacksForType($abstract, $object, $this->afterResolvingCallbacks)
+            $object,
+            $this->getCallbacksForType($abstract, $object, $this->afterResolvingCallbacks)
         );
     }
 
@@ -1081,9 +1139,10 @@ class Container implements ContainerContract
 
     /**
      * Get the alias for an abstract if available.
+     * 获取别名的原名
      *
-     * @param  string  $abstract
-     * @return string
+     * @param  string  $abstract 别名
+     * @return string 原名
      *
      * @throws \LogicException
      */
