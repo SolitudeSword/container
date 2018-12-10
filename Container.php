@@ -28,8 +28,9 @@ class Container implements ContainerContract
 
     /**
      * An array of the types that have been resolved.
+     * 已解析的类型数组，键是类名，值是是否已解析
      *
-     * @var array
+     * @var bool[]
      */
     protected $resolved = [];
 
@@ -120,29 +121,33 @@ class Container implements ContainerContract
 
     /**
      * All of the global resolving callbacks.
+     * 全局的解析回调，实例被创建时被调用，闭包接受两个参数，第一个是新创建的实例，第二个是容器本身
      *
-     * @var array
+     * @var Closure[]
      */
     protected $globalResolvingCallbacks = [];
 
     /**
      * All of the global after resolving callbacks.
+     * 所有按类型分组的解析后回调
      *
-     * @var array
+     * @var Closure[]
      */
     protected $globalAfterResolvingCallbacks = [];
 
     /**
      * All of the resolving callbacks by class type.
+     * 所有按类型分组的解析回调，实例被创建时被调用，闭包接受两个参数，第一个是新创建的实例，第二个是容器本身
      *
-     * @var array
+     * @var Closure[][]
      */
     protected $resolvingCallbacks = [];
 
     /**
      * All of the after resolving callbacks by class type.
+     * 所有按类型分组的解析后回调
      *
-     * @var array
+     * @var Closure[][]
      */
     protected $afterResolvingCallbacks = [];
 
@@ -202,6 +207,7 @@ class Container implements ContainerContract
 
     /**
      * Determine if a given type is shared.
+     * 确定给定类型是否可共享
      *
      * @param  string  $abstract
      * @return bool
@@ -612,9 +618,12 @@ class Container implements ContainerContract
     /**
      * An alias function name for make().
      *
-     * @param  string  $abstract
-     * @param  array  $parameters
+     * @param  string $abstract
+     * @param  array $parameters
      * @return mixed
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
+     * @note 这和 make 没区别啊？！费解
      */
     public function makeWith($abstract, array $parameters = [])
     {
@@ -623,9 +632,10 @@ class Container implements ContainerContract
 
     /**
      * Resolve the given type from the container.
+     * 从容器中解析给定的类型
      *
-     * @param  string $abstract
-     * @param  array $parameters
+     * @param  string $abstract 抽象名
+     * @param  array $parameters 覆盖参数，以参数名称为键
      * @return mixed
      * @throws BindingResolutionException
      * @throws \ReflectionException
@@ -654,9 +664,10 @@ class Container implements ContainerContract
 
     /**
      * Resolve the given type from the container.
+     * 从容器中解析给定的类型
      *
-     * @param  string $abstract
-     * @param  array $parameters
+     * @param  string $abstract 类名或别名
+     * @param  array $parameters 覆盖参数，以参数名称为键
      * @return mixed
      * @throws BindingResolutionException
      * @throws \ReflectionException
@@ -672,6 +683,8 @@ class Container implements ContainerContract
         // If an instance of the type is currently being managed as a singleton we'll
         // just return an existing instance instead of instantiating new instances
         // so the developer can keep using the same objects instance every time.
+        # 如果当前正在对这个类型进行单例管理，那么我们直接返回现有实例而不是实例化新实例
+        # 这样开发人员每次都可以使用相关的对象实例
         if (isset($this->instances[$abstract]) && ! $needsContextualBuild) {
             return $this->instances[$abstract];
         }
@@ -683,6 +696,8 @@ class Container implements ContainerContract
         // We're ready to instantiate an instance of the concrete type registered for
         // the binding. This will instantiate the types, as well as resolve any of
         // its "nested" dependencies recursively until all have gotten resolved.
+        # 已经准备好补实例化为绑定注册的具体类型。这将实例化类型，并以递归方式解析其
+        # 任何嵌套依赖项，直到所有类型都得到解决。
         if ($this->isBuildable($concrete, $abstract)) {
             $object = $this->build($concrete);
         } else {
@@ -692,6 +707,8 @@ class Container implements ContainerContract
         // If we defined any extenders for this type, we'll need to spin through them
         // and apply them to the object being built. This allows for the extension
         // of services, such as changing configuration or decorating the object.
+        # 如果我们为这种类型定义了任何扩展器，我们调用闭包应用于正在构建的对象
+        # 这允许扩展服务，例如更改配置或装饰对象。
         foreach ($this->getExtenders($abstract) as $extender) {
             $object = $extender($object, $this);
         }
@@ -699,6 +716,8 @@ class Container implements ContainerContract
         // If the requested type is registered as a singleton we'll want to cache off
         // the instances in "memory" so we can return it later without creating an
         // entirely new instance of an object on each subsequent request for it.
+        # 如果请求的类型被注册为单例，我们将要在内存中缓存实例，这样我们可以稍后返回它
+        # 而不会在每个后续的请求中创建一个全新的对象实例
         if ($this->isShared($abstract) && ! $needsContextualBuild) {
             $this->instances[$abstract] = $object;
         }
@@ -708,6 +727,8 @@ class Container implements ContainerContract
         // Before returning, we will also set the resolved flag to "true" and pop off
         // the parameter overrides for this build. After those two things are done
         // we will be ready to return back the fully constructed class instance.
+        # 在返回之前，我们将已解析标志设置为 true，并从栈中弹出此构建的覆盖参数
+        # 完成这两个事之后，将返回完全构造的类实例
         $this->resolved[$abstract] = true;
 
         array_pop($this->with);
@@ -717,8 +738,9 @@ class Container implements ContainerContract
 
     /**
      * Get the concrete type for a given abstract.
+     * 获取给定抽象的具体类型
      *
-     * @param  string  $abstract
+     * @param  string  $abstract 抽象名，完整类名或别名
      * @return mixed   $concrete
      */
     protected function getConcrete($abstract)
@@ -730,6 +752,8 @@ class Container implements ContainerContract
         // If we don't have a registered resolver or concrete for the type, we'll just
         // assume each type is a concrete name and will attempt to resolve it as is
         // since the container should be able to resolve concretes automatically.
+        # 如果我们没有注册的解析器或具体类型，我们将假设每种类型都是具体的名称，并尝试
+        # 解决它，因为容器应该能够自动解决
         if (isset($this->bindings[$abstract])) {
             return $this->bindings[$abstract]['concrete'];
         }
@@ -866,6 +890,7 @@ class Container implements ContainerContract
      * @param  ReflectionParameter[] $dependencies 构建函数列表
      * @return array
      * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     protected function resolveDependencies(array $dependencies)
     {
@@ -957,22 +982,24 @@ class Container implements ContainerContract
 
     /**
      * Resolve a class based dependency from the container.
+     * 从容器中解析基于类的依赖项
      *
-     * @param  \ReflectionParameter  $parameter
+     * @param  \ReflectionParameter $parameter 构造函数的参数信息
      * @return mixed
      *
-     * @throws \Illuminate\Contracts\Container\BindingResolutionException
+     * @throws BindingResolutionException
+     * @throws \ReflectionException
      */
     protected function resolveClass(ReflectionParameter $parameter)
-    {# todo mark 继续
+    {
         try {
             return $this->make($parameter->getClass()->name);
-        }
-
-        // If we can not resolve the class instance, we will check to see if the value
-        // is optional, and if it is we will return the optional parameter value as
-        // the value of the dependency, similarly to how we do this with scalars.
-        catch (BindingResolutionException $e) {
+        } catch (BindingResolutionException $e) {
+            // If we can not resolve the class instance, we will check to see if the value
+            // is optional, and if it is we will return the optional parameter value as
+            // the value of the dependency, similarly to how we do this with scalars.
+            # 如果我们无法解析类实例，我们将检查该值是否是可选，如果是，我们将返回可选参数值的默认值
+            # 类似于我们如何使用标量执行此操作
             if ($parameter->isOptional()) {
                 return $parameter->getDefaultValue();
             }
@@ -1004,8 +1031,9 @@ class Container implements ContainerContract
 
     /**
      * Throw an exception for an unresolvable primitive.
+     * 针对无法解析的依赖抛出异常
      *
-     * @param  \ReflectionParameter  $parameter
+     * @param  \ReflectionParameter  $parameter 构造函数参数信息
      * @return void
      *
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
@@ -1020,10 +1048,13 @@ class Container implements ContainerContract
 
     /**
      * Register a new resolving callback.
+     * 注册一个新的解析回调
+     * 闭包接受两个参数，第一个是新创建的实例，第二个是容器本身
      *
-     * @param  \Closure|string  $abstract
-     * @param  \Closure|null  $callback
+     * @param  \Closure|string  $abstract 类名或闭包
+     * @param  \Closure|null  $callback 闭包
      * @return void
+     * @note 如果第二参数为空，且第一个参数是闭包，则增加全局闭包，否则增加参数1表示的类的解析回调
      */
     public function resolving($abstract, Closure $callback = null)
     {
@@ -1040,10 +1071,12 @@ class Container implements ContainerContract
 
     /**
      * Register a new after resolving callback for all types.
+     * 注册一个新的解析后回调，回调的执行时机晚于 resolving 注册的回调，参数定义相同
      *
-     * @param  \Closure|string  $abstract
-     * @param  \Closure|null  $callback
+     * @param  \Closure|string  $abstract 类名或闭包
+     * @param  \Closure|null  $callback 闭包
      * @return void
+     * @see resolving
      */
     public function afterResolving($abstract, Closure $callback = null)
     {
@@ -1060,9 +1093,10 @@ class Container implements ContainerContract
 
     /**
      * Fire all of the resolving callbacks.
+     * 调用所有相关回调
      *
-     * @param  string  $abstract
-     * @param  mixed   $object
+     * @param  string  $abstract 抽象名
+     * @param  mixed   $object 实例对象
      * @return void
      */
     protected function fireResolvingCallbacks($abstract, $object)
@@ -1076,9 +1110,10 @@ class Container implements ContainerContract
 
     /**
      * Fire all of the after resolving callbacks.
+     * 调用所有解析后回调
      *
-     * @param  string  $abstract
-     * @param  mixed   $object
+     * @param  string  $abstract 抽象名
+     * @param  mixed   $object 实例对象
      * @return void
      */
     protected function fireAfterResolvingCallbacks($abstract, $object)
@@ -1093,17 +1128,19 @@ class Container implements ContainerContract
 
     /**
      * Get all callbacks for a given type.
+     * 获取给定类型的所有回调
      *
-     * @param  string  $abstract
-     * @param  object  $object
-     * @param  array   $callbacksPerType
+     * @param  string  $abstract 抽象名
+     * @param  object  $object 实例
+     * @param  Closure[][]   $callbacksPerType 回调列表
      *
-     * @return array
+     * @return Closure[]
      */
     protected function getCallbacksForType($abstract, $object, array $callbacksPerType)
     {
         $results = [];
 
+        # todo 这个遍历很奇怪哎，不需要的呀
         foreach ($callbacksPerType as $type => $callbacks) {
             if ($type === $abstract || $object instanceof $type) {
                 $results = array_merge($results, $callbacks);
@@ -1115,9 +1152,10 @@ class Container implements ContainerContract
 
     /**
      * Fire an array of callbacks with an object.
+     * 调用闭包列表
      *
-     * @param  mixed  $object
-     * @param  array  $callbacks
+     * @param  mixed  $object 实例对象
+     * @param  Closure[]  $callbacks 闭包列表
      * @return void
      */
     protected function fireCallbackArray($object, array $callbacks)
@@ -1161,9 +1199,10 @@ class Container implements ContainerContract
 
     /**
      * Get the extender callbacks for a given type.
+     * 获取给定类型的扩展程序回调
      *
-     * @param  string  $abstract
-     * @return array
+     * @param  string  $abstract 给定类型
+     * @return array 扩展列表
      */
     protected function getExtenders($abstract)
     {
