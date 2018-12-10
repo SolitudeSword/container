@@ -153,8 +153,9 @@ class Container implements ContainerContract
 
     /**
      * Define a contextual binding.
+     * 定义上下文绑定
      *
-     * @param  array|string  $concrete
+     * @param  array|string  $concrete 要构建哪个类时启用上下文绑定
      * @return \Illuminate\Contracts\Container\ContextualBindingBuilder
      */
     public function when($concrete)
@@ -170,8 +171,9 @@ class Container implements ContainerContract
 
     /**
      * Determine if the given abstract type has been bound.
+     * 确定是否已绑定给定的抽象类型
      *
-     * @param  string  $abstract
+     * @param  string  $abstract 抽象类型
      * @return bool
      */
     public function bound($abstract)
@@ -191,9 +193,10 @@ class Container implements ContainerContract
 
     /**
      * Determine if the given abstract type has been resolved.
+     * 确定是否已解析给定的抽象类型
      *
-     * @param  string  $abstract
-     * @return bool
+     * @param  string  $abstract 抽象类型
+     * @return bool 是否已解析
      */
     public function resolved($abstract)
     {
@@ -221,8 +224,9 @@ class Container implements ContainerContract
 
     /**
      * Determine if a given string is an alias.
+     * 确定给定字符串是否为别名
      *
-     * @param  string  $name
+     * @param  string  $name 可能为别名的字符串
      * @return bool
      */
     public function isAlias($name)
@@ -245,6 +249,8 @@ class Container implements ContainerContract
         // If no concrete type was given, we will simply set the concrete type to the
         // abstract type. After that, the concrete type to be registered as shared
         // without being forced to state their classes in both of the parameters.
+        # 如果没有给出具体类型，我们将简单地将具体类型设置为抽象类型。
+        # 之后，要注册为共享的具体类型，而不必强制在两个参数中声明其类。
         if (is_null($concrete)) {
             $concrete = $abstract;
         }
@@ -252,6 +258,8 @@ class Container implements ContainerContract
         // If the factory is not a Closure, it means it is just a class name which is
         // bound into this container to the abstract type and we will just wrap it
         // up inside its own Closure to give us more convenience when extending.
+        # 如果工厂不是闭包，这意味着它只是一个类名，它被绑定到这个容器中的抽象类型，
+        # 我们将它包装在它自己的闭包中，以便在扩展时给我们更多的便利。
         if (! $concrete instanceof Closure) {
             $concrete = $this->getClosure($abstract, $concrete);
         }
@@ -268,9 +276,10 @@ class Container implements ContainerContract
 
     /**
      * Get the Closure to be used when building a type.
+     * 获取构建类型时要使用的闭包
      *
-     * @param  string  $abstract
-     * @param  string  $concrete
+     * @param  string  $abstract 抽象类型
+     * @param  string  $concrete 具体类名
      * @return \Closure
      */
     protected function getClosure($abstract, $concrete)
@@ -341,7 +350,7 @@ class Container implements ContainerContract
      *
      * @param  string  $concrete 正在构建项
      * @param  string  $abstract 被依赖项
-     * @param  \Closure|string  $implementation 实现闭包或实例，闭包只接受一个参数是容器
+     * @param  \Closure|string  $implementation 实现闭包或实例，闭包的第一个参数是容器，第二个参数是传入的参数列表
      * @return void
      */
     public function addContextualBinding($concrete, $abstract, $implementation)
@@ -1228,12 +1237,14 @@ class Container implements ContainerContract
 
     /**
      * Drop all of the stale instances and aliases.
+     * 删除指定抽象的所有旧的实例和别名
      *
-     * @param  string  $abstract
+     * @param  string  $abstract 抽象名
      * @return void
      */
     protected function dropStaleInstances($abstract)
     {
+        # todo 其实这个应该要调整下 $abstractAliases 里的值，否则会对不上的
         unset($this->instances[$abstract], $this->aliases[$abstract]);
     }
 
@@ -1274,6 +1285,7 @@ class Container implements ContainerContract
 
     /**
      * Set the globally available instance of the container.
+     * 获取全局可用单例容器
      *
      * @return static
      */
